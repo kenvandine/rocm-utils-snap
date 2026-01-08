@@ -1,0 +1,68 @@
+name: rocm-utils
+base: core24
+version: '7.1.1'
+summary: ROCm CLI utilities
+description: |
+  This snap bundles the ROCm 7.1.1 runtime libraries and the
+  command‑line tools rocm‑smi, rocminfo, etc.
+
+grade: stable
+confinement: strict
+
+layout:
+  /opt/rocm:
+    symlink: $SNAP/opt/rocm
+
+apps:
+  rocm-smi:
+    command: opt/rocm/bin/rocm-smi
+    plugs:
+      - hardware-observe
+      - opengl
+      - network
+    environment:
+      LD_LIBRARY_PATH: $SNAP/opt/rocm/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+  rocminfo:
+    command: opt/rocm/bin/rocminfo
+    plugs:
+      - hardware-observe
+      - opengl
+      - network
+    environment:
+      LD_LIBRARY_PATH: $SNAP/opt/rocm/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+
+parts:
+  apt-repo:
+    plugin: nil
+    build-packages:
+      - wget
+      - gpg
+    override-pull: |
+      set -e
+      mkdir -p /etc/apt/keyrings
+      wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | \
+        gpg --dearmor | tee /etc/apt/keyrings/rocm.gpg > /dev/null
+      chmod 644 /etc/apt/keyrings/rocm.gpg
+      mkdir -p /etc/apt/sources.list.d
+
+      cat <<EOF > /etc/apt/sources.list.d/rocm.list
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/$CRAFT_PROJECT_VERSION noble main
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/graphics/$CRAFT_PROJECT_VERSION/ubuntu noble main
+      EOF
+
+      cat <<EOF > /etc/apt/preferences.d/rocm-pin-600
+      Package: *
+      Pin: release o=repo.radeon.com
+      Pin-Priority: 600
+      EOF
+      apt update -y
+
+  rocm-debs:
+    plugin: nil
+    after: [apt-repo]
+    stage-packages:
+      - rocm-libs
+      - rocm-smi
+      - rocminfo
+    organize:
+      opt/rocm-$CRAFT_PROJECT_VERSION: opt/rocm
