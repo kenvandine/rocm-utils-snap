@@ -66,3 +66,7 @@ parts:
       - rocminfo
     organize:
       opt/rocm-$CRAFT_PROJECT_VERSION: opt/rocm
+    prime:
+      - -usr/lib/*/*.a
+      - -opt/rocm/lib/*.a
+      - -opt/rocm/include
