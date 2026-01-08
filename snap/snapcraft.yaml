@@ -12,6 +12,8 @@ confinement: strict
 layout:
   /opt/rocm:
     symlink: $SNAP/opt/rocm
+  /opt/amdgpu:
+    symlink: $SNAP/opt/amdgpu
 
 apps:
   rocm-smi:
