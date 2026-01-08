@@ -15,21 +15,30 @@ layout:
   /opt/amdgpu:
     symlink: $SNAP/opt/amdgpu
 
+plugs:
+  rocm-shm:
+    interface: shared-memory
+    private: true
+
 apps:
   rocm-smi:
     command: opt/rocm/bin/rocm-smi
     plugs:
       - hardware-observe
+      - system-observe
       - opengl
       - network
+      - rocm-shm
     environment:
       LD_LIBRARY_PATH: $SNAP/opt/rocm/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
   rocminfo:
     command: opt/rocm/bin/rocminfo
     plugs:
       - hardware-observe
+      - system-observe
       - opengl
       - network
+      - rocm-shm
     environment:
       LD_LIBRARY_PATH: $SNAP/opt/rocm/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
@@ -63,6 +72,8 @@ parts:
     plugin: nil
     after: [apt-repo]
     stage-packages:
+      - libgomp1
+      - libatomic1
       - rocm-libs
       - rocm-smi
       - rocminfo
