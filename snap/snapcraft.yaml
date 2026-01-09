@@ -1,9 +1,9 @@
 name: rocm-utils
 base: core24
-version: '7.1.1'
+version: '7.11.0-20260108-20805388824'
 summary: ROCm CLI utilities
 description: |
-  This snap bundles the ROCm 7.1.1 runtime libraries and the
+  This snap bundles the ROCm 7.11.x runtime libraries and the
   command‑line tools rocm‑smi, rocminfo, etc.
 
 grade: stable
@@ -21,8 +21,18 @@ plugs:
     private: true
 
 apps:
+  amd-smi:
+    command: opt/rocm/core-7.11/bin/amd-smi
+    plugs:
+      - hardware-observe
+      - system-observe
+      - opengl
+      - network
+      - rocm-shm
+    environment:
+      LD_LIBRARY_PATH: $SNAP/opt/rocm/core-7.11/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
   rocm-smi:
-    command: opt/rocm/bin/rocm-smi
+    command: opt/rocm/core-7.11/bin/rocm-smi
     plugs:
       - hardware-observe
       - system-observe
@@ -30,17 +40,18 @@ apps:
       - network
       - rocm-shm
     environment:
-      LD_LIBRARY_PATH: $SNAP/opt/rocm/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+      LD_LIBRARY_PATH: $SNAP/opt/rocm/core-7.11/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
   rocminfo:
-    command: opt/rocm/bin/rocminfo
+    command: opt/rocm/core-7.11/bin/rocminfo
     plugs:
       - hardware-observe
       - system-observe
+      - process-control
       - opengl
       - network
       - rocm-shm
     environment:
-      LD_LIBRARY_PATH: $SNAP/opt/rocm/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+      LD_LIBRARY_PATH: $SNAP/opt/rocm/core-7.11/lib:$SNAP/opt/amdgpu/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 
 parts:
   apt-repo:
@@ -48,24 +59,20 @@ parts:
     build-packages:
       - wget
       - gpg
+      - dpkg-dev
     override-pull: |
       set -e
-      mkdir -p /etc/apt/keyrings
-      wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | \
-        gpg --dearmor | tee /etc/apt/keyrings/rocm.gpg > /dev/null
-      chmod 644 /etc/apt/keyrings/rocm.gpg
-      mkdir -p /etc/apt/sources.list.d
+
+      mkdir -p /rocm-repo
+      cd /rocm-repo
+      tar xvf $SNAPCRAFT_PROJECT_DIR/20260108-20805388824.tar.gz
+      cd /rocm-repo/20260108-20805388824/pool/main
+      dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
       cat <<EOF > /etc/apt/sources.list.d/rocm.list
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/$CRAFT_PROJECT_VERSION noble main
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/graphics/$CRAFT_PROJECT_VERSION/ubuntu noble main
+      deb [trusted=yes] file:/rocm-repo/20260108-20805388824/pool/main ./
       EOF
 
-      cat <<EOF > /etc/apt/preferences.d/rocm-pin-600
-      Package: *
-      Pin: release o=repo.radeon.com
-      Pin-Priority: 600
-      EOF
       apt update -y
 
   rocm-debs:
@@ -74,11 +81,36 @@ parts:
     stage-packages:
       - libgomp1
       - libatomic1
-      - rocm-libs
-      - rocm-smi
-      - rocminfo
-    organize:
-      opt/rocm-$CRAFT_PROJECT_VERSION: opt/rocm
+      - amdrocm-llvm
+      - amdrocm-base
+      - amdrocm-smi
+      - amdrocm-core-gfx1151
+      - amdrocm-core7.11-gfx1151
+      - amdrocm-runtime7.11
+      - amdrocm-runtime
+      - amdrocm-gfx1151
+      - amdrocm-blas-gfx1151
+      - amdrocm-blas7.11-gfx1151
+      - amdrocm-ck-gfx1151
+      - amdrocm-ck7.11-gfx1151
+      - amdrocm-core-gfx1151
+      - amdrocm-core-sdk-gfx1151
+      - amdrocm-core-sdk7.11-gfx1151
+      - amdrocm-core7.11-gfx1151
+      - amdrocm-dnn-gfx1151
+      - amdrocm-dnn7.11-gfx1151
+      - amdrocm-fft-gfx1151
+      - amdrocm-fft7.11-gfx1151
+      - amdrocm-gfx1151
+      - amdrocm-rand-gfx1151
+      - amdrocm-rand7.11-gfx1151
+      - amdrocm-rccl-gfx1151
+      - amdrocm-rccl7.11-gfx1151
+      - amdrocm-solver-gfx1151
+      - amdrocm-solver7.11-gfx1151
+      - amdrocm-sparse-gfx1151
+      - amdrocm-sparse7.11-gfx1151
+      - amdrocm7.11-gfx1151
     prime:
       - -usr/lib/*/*.a
       - -opt/rocm/lib/*.a
